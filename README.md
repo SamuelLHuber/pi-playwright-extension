@@ -51,25 +51,23 @@ Or add it to your pi package list/settings.
 
 ## Install from GitHub
 
-This repo is a pi extension package, so you can install it directly from GitHub.
+This repo is intended for git-based installation in pi.
 
-### Public-style install syntax
-
-If the repo is accessible to your environment, pi can install it from git:
+### HTTPS install
 
 ```bash
 pi install git:github.com/SamuelLHuber/pi-playwright-extension
 ```
 
-To pin a tag or commit later:
+To pin a tag or commit:
 
 ```bash
 pi install git:github.com/SamuelLHuber/pi-playwright-extension@<tag-or-commit>
 ```
 
-### Private repo install over SSH
+### SSH install
 
-Because this repo is private, SSH is the safest install path if your machine already has GitHub SSH access configured:
+If your environment already has GitHub SSH access configured:
 
 ```bash
 pi install git:git@github.com:SamuelLHuber/pi-playwright-extension.git
@@ -97,7 +95,7 @@ pi -e .
 To install it only for the current project:
 
 ```bash
-pi install -l git:git@github.com:SamuelLHuber/pi-playwright-extension.git
+pi install -l git:github.com/SamuelLHuber/pi-playwright-extension
 ```
 
 ## Why this exists
@@ -150,8 +148,6 @@ npm run check
 npm test
 ```
 
-## Verification
-
 ## Retention and cleanup
 
 Artifacts are written into the browser output directory, which defaults to `.pi/browser`.
@@ -198,3 +194,10 @@ The test suite launches a real headless Chromium instance against a local HTTP s
 - bundled run summary generation
 - artifact cleanup
 - extension registration
+
+## Known limitations
+
+- Optimized for headless automation, not interactive desktop browsing.
+- Snapshot refs are intended to be used soon after `browser_snapshot`; page changes can invalidate them.
+- Video recording recreates the browser context to ensure clean recordings.
+- Browser state is intentionally reset on pi session switch, fork, and tree navigation.

@@ -2,6 +2,23 @@
   "name": "pi-playwright-extension",
   "private": true,
   "version": "0.1.0",
+  "description": "Headless Playwright browser extension for pi with persistent browser sessions and browser automation tools.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuelLHuber/pi-playwright-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SamuelLHuber/pi-playwright-extension/issues"
+  },
+  "homepage": "https://github.com/SamuelLHuber/pi-playwright-extension#readme",
+  "keywords": [
+    "pi",
+    "playwright",
+    "browser",
+    "automation",
+    "extension"
+  ],
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
