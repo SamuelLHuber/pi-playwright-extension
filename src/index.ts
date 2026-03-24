@@ -320,11 +320,11 @@ export default function playwrightExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_click",
     label: "Browser Click",
-    description: "Click an element on the current page by ref or selector.",
-    promptSnippet: "Click buttons, links, and other interactive page elements.",
+    description: "Click an element on the current page. Prefer an exact ref from the latest browser_snapshot. Use selector only as a fallback.",
+    promptSnippet: "Click buttons, links, and other interactive page elements using exact refs from browser_snapshot.",
     parameters: Type.Object({
-      ref: Type.Optional(Type.String({ description: "Stable element ref from browser_snapshot." })),
-      selector: Type.Optional(Type.String({ description: "CSS selector when no ref is available." })),
+      ref: Type.Optional(Type.String({ description: "Stable element ref from the latest browser_snapshot. Prefer this." })),
+      selector: Type.Optional(Type.String({ description: "CSS selector only when no usable ref is available." })),
       doubleClick: Type.Optional(Type.Boolean({ description: "Double click instead of single click." })),
       button: Type.Optional(Type.String({ description: "Mouse button: left, right, or middle." })),
     }),
@@ -344,11 +344,11 @@ export default function playwrightExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_type",
     label: "Browser Type",
-    description: "Type text into an element on the current page by ref or selector.",
-    promptSnippet: "Type into inputs and editable controls in the browser.",
+    description: "Type text into an element on the current page. Prefer an exact ref from the latest browser_snapshot. Use selector only as a fallback.",
+    promptSnippet: "Type into inputs and editable controls using exact refs from browser_snapshot.",
     parameters: Type.Object({
-      ref: Type.Optional(Type.String({ description: "Stable element ref from browser_snapshot." })),
-      selector: Type.Optional(Type.String({ description: "CSS selector when no ref is available." })),
+      ref: Type.Optional(Type.String({ description: "Stable element ref from the latest browser_snapshot. Prefer this." })),
+      selector: Type.Optional(Type.String({ description: "CSS selector only when no usable ref is available." })),
       text: Type.String({ description: "The text to enter." }),
       submit: Type.Optional(Type.Boolean({ description: "Press Enter after typing." })),
       slowly: Type.Optional(Type.Boolean({ description: "Type with a small delay between characters." })),

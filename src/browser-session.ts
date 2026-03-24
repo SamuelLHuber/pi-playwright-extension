@@ -235,6 +235,13 @@ export class BrowserSession {
   }
 
   async click(params: { ref?: string; selector?: string; doubleClick?: boolean; button?: "left" | "right" | "middle" }): Promise<TextResult> {
+    const context = await this.getContext();
+    const page = await this.getCurrentPage();
+    const beforePages = context.pages();
+    const beforeCount = beforePages.length;
+    const beforePageIds = new Set(beforePages.map((candidate) => this.getPageId(candidate)));
+    const beforeUrl = page.url();
+
     const locator = await this.resolveLocator(params.ref, params.selector);
     await locator.scrollIntoViewIfNeeded();
     if (params.doubleClick) {
@@ -243,7 +250,36 @@ export class BrowserSession {
       await locator.click({ button: params.button ?? "left" });
     }
     await this.saveVideoFrameHint();
-    return { text: `Clicked ${params.ref ?? params.selector ?? "element"}` };
+    await page.waitForTimeout(150).catch(() => undefined);
+
+    const afterPages = context.pages();
+    const newPage = afterPages.find((candidate) => !beforePageIds.has(this.getPageId(candidate)));
+    const currentPage = this.getCurrentPageOrUndefined();
+    const currentUrl = currentPage?.url();
+
+    const textLines = [`Clicked ${params.ref ?? params.selector ?? "element"}`];
+    const details: Record<string, unknown> = {
+      beforeTabCount: beforeCount,
+      afterTabCount: afterPages.length,
+      currentUrl,
+    };
+
+    if (newPage) {
+      const newTabIndex = afterPages.indexOf(newPage);
+      textLines.push(`A new tab opened: [${newTabIndex}] ${newPage.url() || "about:blank"}`);
+      details.newTabOpened = true;
+      details.newTabIndex = newTabIndex;
+      details.newTabUrl = newPage.url();
+    } else if (currentUrl && currentUrl !== beforeUrl) {
+      textLines.push(`Current tab navigated to: ${currentUrl}`);
+      details.newTabOpened = false;
+      details.navigationInCurrentTab = true;
+    } else {
+      details.newTabOpened = false;
+      details.navigationInCurrentTab = false;
+    }
+
+    return { text: textLines.join("\n"), details };
   }
 
   async type(params: { ref?: string; selector?: string; text: string; submit?: boolean; slowly?: boolean }): Promise<TextResult> {
@@ -857,7 +893,7 @@ export class BrowserSession {
     if (ref) {
       const existing = this.currentRefs.get(ref);
       if (!existing) {
-        throw new Error(`Unknown ref ${ref}. Run browser_snapshot again before interacting.`);
+        throw new Error(`Unknown ref ${ref}. Run browser_snapshot again and use one of the exact returned refs.`);
       }
       if (existing.pageId !== this.getPageId(page)) {
         throw new Error(`Ref ${ref} belongs to a different tab. Select the correct tab or resnapshot.`);
@@ -867,7 +903,7 @@ export class BrowserSession {
     if (selector) {
       return page.locator(selector);
     }
-    throw new Error("Tool requires either ref or selector");
+    throw new Error("Tool requires either ref or selector. Prefer exact refs from browser_snapshot; use selectors only as a fallback.");
   }
 
   private parseFunction(source: string): (...args: unknown[]) => unknown {

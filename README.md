@@ -49,6 +49,57 @@ pi -e /absolute/path/to/pi-playwright-extension
 
 Or add it to your pi package list/settings.
 
+## Install from GitHub
+
+This repo is a pi extension package, so you can install it directly from GitHub.
+
+### Public-style install syntax
+
+If the repo is accessible to your environment, pi can install it from git:
+
+```bash
+pi install git:github.com/SamuelLHuber/pi-playwright-extension
+```
+
+To pin a tag or commit later:
+
+```bash
+pi install git:github.com/SamuelLHuber/pi-playwright-extension@<tag-or-commit>
+```
+
+### Private repo install over SSH
+
+Because this repo is private, SSH is the safest install path if your machine already has GitHub SSH access configured:
+
+```bash
+pi install git:git@github.com:SamuelLHuber/pi-playwright-extension.git
+```
+
+Or pinned:
+
+```bash
+pi install git:git@github.com:SamuelLHuber/pi-playwright-extension.git@<tag-or-commit>
+```
+
+### Clone and load directly
+
+If you prefer to keep the repo checked out locally:
+
+```bash
+git clone git@github.com:SamuelLHuber/pi-playwright-extension.git
+cd pi-playwright-extension
+npm install
+pi -e .
+```
+
+### Project-local install
+
+To install it only for the current project:
+
+```bash
+pi install -l git:git@github.com:SamuelLHuber/pi-playwright-extension.git
+```
+
 ## Why this exists
 
 This extension takes inspiration from Playwright MCP, but presents a pi-native tool surface instead of exposing a generic MCP bridge. The main goal is reliable headless webpage testing with a stable browser session across turns.

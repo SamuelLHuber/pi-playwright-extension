@@ -35,6 +35,7 @@ before(async () => {
     <h1>Login</h1>
     <label>Email <input id="email" placeholder="Email" /></label>
     <button id="submit" onclick="console.error('clicked submit'); fetch('/api/data').then(() => location.href='/next');">Submit</button>
+    <a href="/next" target="_blank" aria-label="Open next tab">Open next tab</a>
   </body>
 </html>`);
   });
@@ -108,7 +109,11 @@ test("browser tabs can create, select, list, and close tabs", async () => {
   });
   await session.start();
   await session.navigate(baseUrl);
-  await session.tabs("new", undefined, `${baseUrl}/next`);
+  const snapshot = await session.snapshot();
+  const newTabRef = snapshot.refs.find((ref) => ref.name === "Open next tab");
+  assert.ok(newTabRef, "expected link that opens a new tab");
+  const clickResult = await session.click({ ref: newTabRef.ref });
+  assert.match(clickResult.text, /A new tab opened: \[1\]/);
 
   const list = await session.tabs("list");
   assert.match(list.text, /\[0\]/);
