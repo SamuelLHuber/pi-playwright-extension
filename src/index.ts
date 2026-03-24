@@ -33,24 +33,6 @@ function formatBrowserStatus(status: BrowserStatus): string {
   return `Browser: ${bits.join(" | ")}`;
 }
 
-function buildWidget(status: BrowserStatus): string[] {
-  const lines = [
-    "Browser",
-    `- Engine: ${status.browserName}`,
-    `- Headless: ${status.headless ? "yes" : "no"}`,
-    `- Tabs: ${status.tabCount}`,
-    `- Video: ${status.recordingVideo ? "recording" : "off"}`,
-  ];
-  const urlLine = formatStatusLine("- URL", status.currentUrl);
-  if (urlLine) lines.push(urlLine);
-  const titleLine = formatStatusLine("- Title", status.currentTitle);
-  if (titleLine) lines.push(titleLine);
-  const lastVideoLine = formatStatusLine("- Last video", status.lastVideoPath);
-  if (lastVideoLine) lines.push(lastVideoLine);
-  lines.push(`- Output: ${status.outputDir}`);
-  return lines;
-}
-
 export default function playwrightExtension(pi: ExtensionAPI) {
   let browserSession: BrowserSession | undefined;
   let lastCwd = process.cwd();
@@ -101,7 +83,6 @@ export default function playwrightExtension(pi: ExtensionAPI) {
       outputDir: resolveOutputDir(lastCwd, pi.getFlag("browser-output-dir") as string | undefined),
     };
     ctx.ui.setStatus("browser", formatBrowserStatus(status));
-    ctx.ui.setWidget("browser", buildWidget(status), { placement: "aboveEditor" });
   }
 
   async function closeSession(ctx: ExtensionContext, reason?: string): Promise<void> {
@@ -199,7 +180,7 @@ export default function playwrightExtension(pi: ExtensionAPI) {
     description: "Show browser status",
     handler: async (_args, ctx) => {
       updateUi(ctx);
-      ctx.ui.notify(buildWidget(browserSession?.getStatus() ?? {
+      const status = browserSession?.getStatus() ?? {
         started: false,
         browserName: normalizeBrowserName(pi.getFlag("browser-engine") as string | undefined),
         headless: parseBooleanFlag(pi.getFlag("browser-headless"), true),
@@ -207,7 +188,8 @@ export default function playwrightExtension(pi: ExtensionAPI) {
         tabCount: 0,
         currentTabIndex: -1,
         outputDir: resolveOutputDir(ctx.cwd, pi.getFlag("browser-output-dir") as string | undefined),
-      }).join("\n"), "info");
+      };
+      ctx.ui.notify(formatBrowserStatus(status), "info");
     },
   });
 
