@@ -53,8 +53,8 @@ export default function playwrightExtension(pi: ExtensionAPI) {
         maxBytes: parsePositiveBytes(pi.getFlag("browser-retention-max-bytes") as string | undefined, DEFAULT_RETENTION_MAX_BYTES),
         maxAgeDays: parsePositiveInt(pi.getFlag("browser-retention-max-days") as string | undefined, DEFAULT_RETENTION_MAX_DAYS),
       },
-      actionTimeoutMs: Number(pi.getFlag("browser-timeout-action") ?? DEFAULT_ACTION_TIMEOUT_MS),
-      navigationTimeoutMs: Number(pi.getFlag("browser-timeout-navigation") ?? DEFAULT_NAVIGATION_TIMEOUT_MS),
+      actionTimeoutMs: parsePositiveInt(pi.getFlag("browser-timeout-action") as string | undefined, DEFAULT_ACTION_TIMEOUT_MS),
+      navigationTimeoutMs: parsePositiveInt(pi.getFlag("browser-timeout-navigation") as string | undefined, DEFAULT_NAVIGATION_TIMEOUT_MS),
     };
     const storageStatePath = (pi.getFlag("browser-storage-state") as string | undefined) || undefined;
     if (storageStatePath) {
@@ -164,14 +164,6 @@ export default function playwrightExtension(pi: ExtensionAPI) {
     await closeSession(ctx);
   });
 
-  pi.on("session_switch", async (_event, ctx) => {
-    await closeSession(ctx, "Browser reset after session switch.");
-  });
-
-  pi.on("session_fork", async (_event, ctx) => {
-    await closeSession(ctx, "Browser reset after session fork.");
-  });
-
   pi.on("session_tree", async (_event, ctx) => {
     await closeSession(ctx, "Browser reset after tree navigation.");
   });
@@ -212,8 +204,7 @@ export default function playwrightExtension(pi: ExtensionAPI) {
     description: "Reset the headless browser session",
     handler: async (_args, ctx) => {
       await closeSession(ctx);
-      const session = await getSession(ctx);
-      await session.start();
+      await getSession(ctx);
       updateUi(ctx);
       ctx.ui.notify("Browser reset.", "info");
     },

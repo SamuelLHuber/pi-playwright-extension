@@ -35,6 +35,20 @@ declare module "@mariozechner/pi-coding-agent" {
     ): Promise<ToolResult<TDetails>>;
   }
 
+  export interface SessionStartEvent {
+    type: "session_start";
+    reason: "startup" | "reload" | "new" | "resume" | "fork";
+    previousSessionFile?: string;
+  }
+
+  export interface SessionShutdownEvent {
+    type: "session_shutdown";
+  }
+
+  export interface SessionTreeEvent {
+    type: "session_tree";
+  }
+
   export interface ExtensionAPI {
     registerFlag(
       name: string,
@@ -46,6 +60,8 @@ declare module "@mariozechner/pi-coding-agent" {
       options: { description?: string; handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> },
     ): void;
     registerTool<TParams extends TSchema = TSchema, TDetails = unknown>(tool: ToolDefinition<TParams, TDetails>): void;
-    on(event: "session_start" | "session_shutdown" | "session_switch" | "session_fork" | "session_tree", handler: (event: unknown, ctx: ExtensionContext) => Promise<void>): void;
+    on(event: "session_start", handler: (event: SessionStartEvent, ctx: ExtensionContext) => Promise<void>): void;
+    on(event: "session_shutdown", handler: (event: SessionShutdownEvent, ctx: ExtensionContext) => Promise<void>): void;
+    on(event: "session_tree", handler: (event: SessionTreeEvent, ctx: ExtensionContext) => Promise<void>): void;
   }
 }
