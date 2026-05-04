@@ -354,14 +354,18 @@ export default function playwrightExtension(pi: ExtensionAPI) {
     label: "Browser Wait For",
     description: "Wait for time, selector visibility, text appearance, or text disappearance.",
     parameters: Type.Object({
-      time: Type.Optional(Type.Number({ description: "Seconds to wait." })),
+      timeMs: Type.Optional(Type.Number({
+        description: "Milliseconds to wait (max 60000).",
+        minimum: 0,
+        maximum: 60000
+      })),
       selector: Type.Optional(Type.String({ description: "CSS selector to wait to become visible." })),
       text: Type.Optional(Type.String({ description: "Visible text to wait for." })),
       textGone: Type.Optional(Type.String({ description: "Visible text to wait to disappear." })),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const session = await getSession(ctx);
-      const result = await session.waitFor(params);
+      const result = await session.waitFor(params, signal);
       updateUi(ctx);
       return { content: [{ type: "text", text: result.text }], details: {} };
     },

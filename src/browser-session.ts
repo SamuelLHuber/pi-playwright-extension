@@ -309,29 +309,103 @@ export class BrowserSession {
     return { text: `Pressed key ${key}` };
   }
 
-  async waitFor(params: { time?: number; text?: string; textGone?: string; selector?: string }): Promise<TextResult> {
+  async waitFor(
+    params: { timeMs?: number; text?: string; textGone?: string; selector?: string },
+    signal?: AbortSignal
+  ): Promise<TextResult> {
     const page = await this.getCurrentPage();
-    if (params.time !== undefined) {
-      await page.waitForTimeout(params.time * 1000);
-      await this.saveVideoFrameHint();
-      return { text: `Waited ${params.time}s` };
+
+    if (signal?.aborted) {
+      throw new Error("Wait cancelled by user");
     }
+
+    if (params.timeMs !== undefined) {
+      const waitPromise = page.waitForTimeout(params.timeMs);
+
+      if (signal) {
+        const abortPromise = new Promise<void>((_, reject) => {
+          const onAbort = () => reject(new Error("Wait cancelled by user"));
+          signal.addEventListener("abort", onAbort, { once: true });
+          // Cleanup if wait completes before abort
+          waitPromise.then(() => signal.removeEventListener("abort", onAbort)).catch(() => {});
+        });
+        await Promise.race([waitPromise, abortPromise]);
+      } else {
+        await waitPromise;
+      }
+
+      await this.saveVideoFrameHint();
+      return { text: `Waited ${params.timeMs}ms` };
+    }
+
     if (params.selector) {
-      await page.locator(params.selector).waitFor({ state: "visible" });
+      const locator = page.locator(params.selector);
+      if (signal) {
+        await this.waitForLocatorWithSignal(locator, "visible", signal);
+      } else {
+        await locator.waitFor({ state: "visible" });
+      }
       await this.saveVideoFrameHint();
       return { text: `Selector became visible: ${params.selector}` };
     }
+
     if (params.text) {
-      await page.getByText(params.text, { exact: false }).waitFor({ state: "visible" });
+      const locator = page.getByText(params.text, { exact: false });
+      if (signal) {
+        await this.waitForLocatorWithSignal(locator, "visible", signal);
+      } else {
+        await locator.waitFor({ state: "visible" });
+      }
       await this.saveVideoFrameHint();
       return { text: `Text became visible: ${params.text}` };
     }
+
     if (params.textGone) {
-      await page.getByText(params.textGone, { exact: false }).waitFor({ state: "hidden" });
+      const locator = page.getByText(params.textGone, { exact: false });
+      if (signal) {
+        await this.waitForLocatorWithSignal(locator, "hidden", signal);
+      } else {
+        await locator.waitFor({ state: "hidden" });
+      }
       await this.saveVideoFrameHint();
       return { text: `Text disappeared: ${params.textGone}` };
     }
-    throw new Error("wait_for requires one of: time, selector, text, textGone");
+
+    throw new Error("wait_for requires one of: timeMs, selector, text, textGone");
+  }
+
+  private async waitForLocatorWithSignal(
+    locator: ReturnType<Page["locator"]>,
+    state: "visible" | "hidden",
+    signal: AbortSignal
+  ): Promise<void> {
+    if (signal.aborted) {
+      throw new Error("Wait cancelled by user");
+    }
+
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        cleanup();
+        reject(new Error("Wait cancelled by user"));
+      };
+
+      const cleanup = () => {
+        signal.removeEventListener("abort", onAbort);
+      };
+
+      signal.addEventListener("abort", onAbort, { once: true });
+
+      locator.waitFor({ state }).then(
+        () => {
+          cleanup();
+          resolve();
+        },
+        (error) => {
+          cleanup();
+          reject(error);
+        }
+      );
+    });
   }
 
   async evaluate(params: { function: string; ref?: string; selector?: string }): Promise<TextResult> {
