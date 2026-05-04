@@ -1,7 +1,7 @@
 {
   "name": "pi-playwright-extension",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Headless Playwright browser extension for pi with persistent browser sessions and browser automation tools.",
   "license": "Apache-2.0",
   "repository": {
