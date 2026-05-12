@@ -262,56 +262,81 @@ export async function approveRequest(
   sessionId: string,
   requestId: string,
   result?: unknown
-): Promise<void> {
+): Promise<{ success: true; result: unknown } | { success: false; error: string }> {
   const session = walletSessions.get(sessionId);
-  if (!session) throw new Error("Session not found");
+  if (!session) {
+    return { success: false, error: "Session not found" };
+  }
 
   const request = session.pendingRequests.get(requestId);
-  if (!request) throw new Error("Request not found");
+  if (!request) {
+    return { success: false, error: "Request not found - may have been already handled" };
+  }
 
   session.pendingRequests.delete(requestId);
 
-  if (request.method === "eth_requestAccounts") {
-    request.resolve(session.account ? [session.account.address] : []);
-  } else if (request.method === "eth_sendTransaction" && session.account) {
-    // Sign and send the transaction
-    const txParams = request.params?.[0] as any;
-    const client = createWalletClient({
-      account: session.account,
-      chain: session.chain,
-      transport: session.transports[session.chain.id] ?? http(),
-    });
-    const hash = await client.sendTransaction({
-      to: txParams.to,
-      data: txParams.data,
-      value: txParams.value ? BigInt(txParams.value) : undefined,
-    });
-    request.resolve(hash);
-  } else if (request.method === "personal_sign" && session.account) {
-    const message = request.params?.[0] as Hex;
-    const signature = await session.account.signMessage({
-      message: { raw: message },
-    });
-    request.resolve(signature);
-  } else {
-    request.resolve(result);
+  try {
+    if (request.method === "eth_requestAccounts") {
+      const addresses = session.account ? [session.account.address] : [];
+      request.resolve(addresses);
+      return { success: true, result: addresses };
+    } else if (request.method === "eth_sendTransaction" && session.account) {
+      // Sign and send the transaction
+      const txParams = request.params?.[0] as any;
+      const client = createWalletClient({
+        account: session.account,
+        chain: session.chain,
+        transport: session.transports[session.chain.id] ?? http(),
+      });
+      const hash = await client.sendTransaction({
+        to: txParams.to,
+        data: txParams.data,
+        value: txParams.value ? BigInt(txParams.value) : undefined,
+      });
+      request.resolve(hash);
+      return { success: true, result: hash };
+    } else if (request.method === "personal_sign" && session.account) {
+      const message = request.params?.[0] as Hex;
+      const signature = await session.account.signMessage({
+        message: { raw: message },
+      });
+      request.resolve(signature);
+      return { success: true, result: signature };
+    } else {
+      request.resolve(result);
+      return { success: true, result };
+    }
+  } catch (e) {
+    // Extract a clean error message for the dApp
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    
+    // Reject the dApp's promise with a clean error
+    request.reject(new Error(errorMessage));
+    
+    // Return failure so the tool can report it properly
+    return { success: false, error: errorMessage };
   }
 }
 
-// Reject a pending request
+// Reject a pending request - returns success/failure instead of throwing
 export function rejectRequest(
   sessionId: string,
   requestId: string,
   reason?: string
-): void {
+): { success: true } | { success: false; error: string } {
   const session = walletSessions.get(sessionId);
-  if (!session) throw new Error("Session not found");
+  if (!session) {
+    return { success: false, error: "Session not found" };
+  }
 
   const request = session.pendingRequests.get(requestId);
-  if (!request) throw new Error("Request not found");
+  if (!request) {
+    return { success: false, error: "Request not found - may have been already handled" };
+  }
 
   session.pendingRequests.delete(requestId);
   request.reject(new Error(reason ?? "User rejected request"));
+  return { success: true };
 }
 
 // Update session with new account

@@ -200,20 +200,26 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         return;
       }
 
-      try {
-        // First resolve the Promise so the dApp gets its response
-        walletState.pendingApprovals.delete(requestId);
+      // Execute the approval
+      const result = await approveRequest(walletState.sessionId, requestId);
+      
+      if (result.success) {
+        // Resolve the dApp's promise with the actual result
+        approval.resolve(result.result);
         
-        // Then call the wallet provider to execute the actual operation
-        await approveRequest(walletState.sessionId, requestId);
+        // Format success message
+        let successMsg = `Approved request ${requestId}`;
+        if (approval.method === "eth_sendTransaction") {
+          successMsg += `\nTransaction hash: ${result.result}`;
+        } else if (approval.method === "eth_requestAccounts") {
+          successMsg += `\nConnected address: ${(result.result as string[]).join(", ")}`;
+        }
         
-        // Resolve with success - the actual result comes from approveRequest
-        approval.resolve({ approved: true });
-        
-        ctx.ui.notify(`Approved request ${requestId}`, "info");
-      } catch (e) {
-        approval.reject(e instanceof Error ? e : new Error(String(e)));
-        ctx.ui.notify(`Failed to approve: ${e instanceof Error ? e.message : String(e)}`, "error");
+        ctx.ui.notify(successMsg, "info");
+      } else {
+        // Reject the dApp's promise with the error
+        approval.reject(new Error(result.error));
+        ctx.ui.notify(`Transaction failed: ${result.error}`, "error");
       }
     },
   });
@@ -238,19 +244,16 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         return;
       }
 
-      try {
-        // Reject the Promise so the dApp gets an error
+      // Call wallet provider to reject - handles cleanup and dApp notification
+      const result = rejectRequest(walletState.sessionId, requestId, "User rejected request");
+      
+      if (result.success) {
+        // Remove from local pending approvals and notify the waiting Promise
         walletState.pendingApprovals.delete(requestId);
-        
-        // Also call the wallet provider to clean up
-        rejectRequest(walletState.sessionId, requestId, "User rejected request");
-        
-        // Reject the Promise
         approval.reject(new Error("User rejected request"));
-        
         ctx.ui.notify(`Rejected request ${requestId}`, "info");
-      } catch (e) {
-        ctx.ui.notify(`Failed to reject: ${e instanceof Error ? e.message : String(e)}`, "error");
+      } else {
+        ctx.ui.notify(`Failed to reject: ${result.error}`, "error");
       }
     },
   });
@@ -385,23 +388,35 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         };
       }
 
-      try {
-        // First resolve the Promise so the dApp gets its response
-        walletState.pendingApprovals.delete(params.requestId);
+      // Execute the approval - returns {success, result|error}
+      const result = await approveRequest(walletState.sessionId, params.requestId);
+      
+      if (result.success) {
+        // Resolve the dApp's promise with the actual result
+        approval.resolve(result.result);
         
-        // Then call the wallet provider to execute the actual operation
-        await approveRequest(walletState.sessionId, params.requestId);
-        
-        // Resolve with success
-        approval.resolve({ approved: true });
+        // Format success message based on what was approved
+        let successMsg = `Approved request ${params.requestId}`;
+        if (approval.method === "eth_sendTransaction") {
+          successMsg += `\nTransaction hash: ${result.result}`;
+        } else if (approval.method === "eth_requestAccounts") {
+          successMsg += `\nConnected address: ${(result.result as string[]).join(", ")}`;
+        } else if (approval.method === "personal_sign") {
+          successMsg += `\nSignature: ${result.result}`;
+        }
         
         return {
-          content: [{ type: "text", text: `Approved request ${params.requestId}` }],
+          content: [{ type: "text", text: successMsg }],
         };
-      } catch (e) {
-        approval.reject(e instanceof Error ? e : new Error(String(e)));
+      } else {
+        // Reject the dApp's promise with the error
+        approval.reject(new Error(result.error));
+        
         return {
-          content: [{ type: "text", text: `Failed to approve: ${e instanceof Error ? e.message : String(e)}` }],
+          content: [{ 
+            type: "text", 
+            text: `Transaction failed: ${result.error}\n\nThe dApp has been notified of the failure.`,
+          }],
           isError: true,
         };
       }
@@ -432,23 +447,21 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         };
       }
 
-      try {
-        // Reject the Promise so the dApp gets an error
+      // Call wallet provider to reject - handles cleanup and dApp notification
+      const result = rejectRequest(walletState.sessionId, params.requestId, params.reason ?? "User rejected request");
+      
+      if (result.success) {
+        // Remove from local pending approvals and notify the waiting Promise
         walletState.pendingApprovals.delete(params.requestId);
-        
-        // Also call the wallet provider to clean up
-        rejectRequest(walletState.sessionId, params.requestId, params.reason ?? "User rejected request");
-        
-        // Reject the Promise
         const error = new Error(params.reason ?? "User rejected request");
         approval.reject(error);
         
         return {
           content: [{ type: "text", text: `Rejected request ${params.requestId}` }],
         };
-      } catch (e) {
+      } else {
         return {
-          content: [{ type: "text", text: `Failed to reject: ${e instanceof Error ? e.message : String(e)}` }],
+          content: [{ type: "text", text: `Failed to reject: ${result.error}` }],
           isError: true,
         };
       }
