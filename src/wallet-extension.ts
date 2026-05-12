@@ -36,6 +36,8 @@ interface PendingApproval {
   origin: string;
   params?: unknown[] | undefined;
   timestamp: number;
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
 }
 
 export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () => Promise<BrowserSession>) {
@@ -44,26 +46,30 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
     pendingApprovals: new Map(),
   };
 
-  // Set up the approval handler
+  // Set up the approval handler - returns a Promise that resolves when user approves
   setRequestHandler(async (request) => {
-    const approval: PendingApproval = {
-      id: request.id,
-      method: request.method,
-      origin: request.origin,
-      params: request.params,
-      timestamp: request.timestamp,
-    };
-    walletState.pendingApprovals.set(request.id, approval);
+    return new Promise((resolve, reject) => {
+      const approval: PendingApproval = {
+        id: request.id,
+        method: request.method,
+        origin: request.origin,
+        params: request.params,
+        timestamp: request.timestamp,
+        resolve,
+        reject,
+      };
+      walletState.pendingApprovals.set(request.id, approval);
 
-    // Format user-friendly message
-    let message = formatWalletRequest(request.method, request.params, request.origin);
-    
-    // Notify the user UI (this would need to integrate with pi's notification system)
-    console.log("[Pi Wallet] Approval required:", message);
-    
-    // For now, we throw to signal that user approval is needed
-    // In a real implementation, this would wait for a tool call
-    throw new Error(`Wallet approval required: ${message}`);
+      // Format user-friendly message
+      const message = formatWalletRequest(request.method, request.params, request.origin);
+      
+      // Log to console so user sees it in pi's output
+      console.log("[Pi Wallet] Approval required:", message);
+      console.log(`[Pi Wallet] Use 'wallet_approve with requestId="${request.id}"' to approve`);
+      console.log(`[Pi Wallet] Or use 'wallet_reject with requestId="${request.id}"' to reject`);
+      
+      // The Promise remains pending until wallet_approve or wallet_reject is called
+    });
   });
 
   // Register flag for default chain
@@ -188,11 +194,25 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         return;
       }
 
+      const approval = walletState.pendingApprovals.get(requestId);
+      if (!approval) {
+        ctx.ui.notify(`Request ${requestId} not found or already handled`, "error");
+        return;
+      }
+
       try {
-        await approveRequest(walletState.sessionId, requestId);
+        // First resolve the Promise so the dApp gets its response
         walletState.pendingApprovals.delete(requestId);
+        
+        // Then call the wallet provider to execute the actual operation
+        await approveRequest(walletState.sessionId, requestId);
+        
+        // Resolve with success - the actual result comes from approveRequest
+        approval.resolve({ approved: true });
+        
         ctx.ui.notify(`Approved request ${requestId}`, "info");
       } catch (e) {
+        approval.reject(e instanceof Error ? e : new Error(String(e)));
         ctx.ui.notify(`Failed to approve: ${e instanceof Error ? e.message : String(e)}`, "error");
       }
     },
@@ -212,9 +232,22 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         return;
       }
 
+      const approval = walletState.pendingApprovals.get(requestId);
+      if (!approval) {
+        ctx.ui.notify(`Request ${requestId} not found or already handled`, "error");
+        return;
+      }
+
       try {
-        rejectRequest(walletState.sessionId, requestId);
+        // Reject the Promise so the dApp gets an error
         walletState.pendingApprovals.delete(requestId);
+        
+        // Also call the wallet provider to clean up
+        rejectRequest(walletState.sessionId, requestId, "User rejected request");
+        
+        // Reject the Promise
+        approval.reject(new Error("User rejected request"));
+        
         ctx.ui.notify(`Rejected request ${requestId}`, "info");
       } catch (e) {
         ctx.ui.notify(`Failed to reject: ${e instanceof Error ? e.message : String(e)}`, "error");
@@ -344,13 +377,29 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         };
       }
 
+      const approval = walletState.pendingApprovals.get(params.requestId);
+      if (!approval) {
+        return {
+          content: [{ type: "text", text: `Request ${params.requestId} not found or already handled` }],
+          isError: true,
+        };
+      }
+
       try {
-        await approveRequest(walletState.sessionId, params.requestId);
+        // First resolve the Promise so the dApp gets its response
         walletState.pendingApprovals.delete(params.requestId);
+        
+        // Then call the wallet provider to execute the actual operation
+        await approveRequest(walletState.sessionId, params.requestId);
+        
+        // Resolve with success
+        approval.resolve({ approved: true });
+        
         return {
           content: [{ type: "text", text: `Approved request ${params.requestId}` }],
         };
       } catch (e) {
+        approval.reject(e instanceof Error ? e : new Error(String(e)));
         return {
           content: [{ type: "text", text: `Failed to approve: ${e instanceof Error ? e.message : String(e)}` }],
           isError: true,
@@ -375,9 +424,25 @@ export function registerWalletExtension(pi: ExtensionAPI, getBrowserSession: () 
         };
       }
 
+      const approval = walletState.pendingApprovals.get(params.requestId);
+      if (!approval) {
+        return {
+          content: [{ type: "text", text: `Request ${params.requestId} not found or already handled` }],
+          isError: true,
+        };
+      }
+
       try {
-        rejectRequest(walletState.sessionId, params.requestId, params.reason);
+        // Reject the Promise so the dApp gets an error
         walletState.pendingApprovals.delete(params.requestId);
+        
+        // Also call the wallet provider to clean up
+        rejectRequest(walletState.sessionId, params.requestId, params.reason ?? "User rejected request");
+        
+        // Reject the Promise
+        const error = new Error(params.reason ?? "User rejected request");
+        approval.reject(error);
+        
         return {
           content: [{ type: "text", text: `Rejected request ${params.requestId}` }],
         };
