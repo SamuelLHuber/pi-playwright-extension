@@ -6,6 +6,7 @@ Headless Playwright browser extension for pi.
 
 This extension makes browser automation a first-class pi capability with a persistent headless browser session and browser-specific tools:
 
+### Browser Tools
 - `browser_navigate`
 - `browser_snapshot`
 - `browser_click`
@@ -23,15 +24,29 @@ This extension makes browser automation a first-class pi capability with a persi
 - `browser_tabs`
 - `browser_close`
 
-It also adds these commands:
+### Wallet Tools (Web3)
+- `wallet_enable` - Enable Pi Wallet provider in the browser
+- `wallet_import` - Import a private key for signing
+- `wallet_status` - Get wallet status and pending approvals
+- `wallet_approve` - Approve a wallet request
+- `wallet_reject` - Reject a wallet request
 
-- `/browser`
-- `/browser-open <url>`
-- `/browser-reset`
-- `/browser-close`
-- `/browser-video-start`
-- `/browser-video-stop`
-- `/browser-clean`
+### Commands
+- `/browser` - Show browser status
+- `/browser-open <url>` - Open URL
+- `/browser-reset` - Reset browser
+- `/browser-close` - Close browser
+- `/browser-video-start` - Start video recording
+- `/browser-video-stop` - Stop video recording
+- `/browser-clean` - Clean artifacts
+
+### Wallet Commands
+- `/wallet-enable` - Enable Pi Wallet in current page
+- `/wallet-import <private-key>` - Import wallet
+- `/wallet-generate` - Generate test wallet
+- `/wallet-status` - Show wallet status
+- `/wallet-approve [id]` - Approve request
+- `/wallet-reject <id>` - Reject request
 
 ## Install locally in pi
 
@@ -195,9 +210,66 @@ The test suite launches a real headless Chromium instance against a local HTTP s
 - artifact cleanup
 - extension registration
 
+## Pi Wallet (Web3)
+
+Pi can act as a browser extension wallet like MetaMask, allowing you to connect to dApps and sign transactions.
+
+### How it works
+
+Pi Wallet uses the EIP-6963 standard (Multi-Provider Discovery) - the same standard MetaMask uses. When enabled, Pi injects a wallet provider into the page that dApps can discover.
+
+### Usage Workflow
+
+1. **Navigate to a dApp**:
+   ```
+   browser_navigate to https://app.uniswap.org
+   ```
+
+2. **Enable Pi Wallet**:
+   ```
+   wallet_enable
+   ```
+
+3. **Import your wallet**:
+   ```
+   wallet_import with privateKey=0x...
+   ```
+   Or generate a test wallet:
+   ```
+   /wallet-generate
+   ```
+
+4. **Connect on the dApp**:
+   - Click "Connect Wallet" on the dApp
+   - Select "Pi Wallet" from the options
+   - Approve the connection request via `wallet_approve`
+
+5. **Sign transactions**:
+   - When the dApp requests a transaction or signature, Pi will pause
+   - Use `wallet_status` to see pending requests
+   - Use `wallet_approve` to sign, or `wallet_reject` to decline
+
+### Security
+
+- Private keys are stored only in memory for the session
+- Every transaction requires explicit approval
+- Keys are cleared when the pi session ends
+- Never commit private keys to version control
+
+### Supported Chains
+
+- Ethereum Mainnet
+- Sepolia (testnet)
+- Polygon
+- Optimism
+- Arbitrum
+- Base
+
+Configure with `--wallet-default-chain` flag or pass chain to `wallet_enable`.
+
 ## Known limitations
 
 - Optimized for headless automation, not interactive desktop browsing.
 - Snapshot refs are intended to be used soon after `browser_snapshot`; page changes can invalidate them.
 - Video recording recreates the browser context to ensure clean recordings.
-- Browser state is intentionally reset on pi session switch, fork, and tree navigation.
+- Browser state is intentionally reset on pi session switch, fork, or tree navigation.

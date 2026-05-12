@@ -29,9 +29,18 @@
       "./src/index.ts"
     ]
   },
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    },
+    "./wallet": {
+      "import": "./src/wallet-provider.ts"
+    }
+  },
   "dependencies": {
     "@sinclair/typebox": "^0.34.41",
-    "playwright": "^1.52.0"
+    "playwright": "^1.52.0",
+    "viem": "^2.13.8"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

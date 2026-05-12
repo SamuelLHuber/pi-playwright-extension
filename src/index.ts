@@ -3,6 +3,7 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { BrowserSession } from "./browser-session.js";
 import type { BrowserLaunchConfig, BrowserStatus } from "./types.js";
 import { formatStatusLine, normalizeBrowserName, parsePositiveBytes, parsePositiveInt, parseViewport, resolveOutputDir } from "./utils.js";
+import { registerWalletExtension } from "./wallet-extension.js";
 
 const DEFAULT_VIEWPORT = { width: 1440, height: 960 };
 const DEFAULT_ACTION_TIMEOUT_MS = 5_000;
@@ -525,5 +526,13 @@ export default function playwrightExtension(pi: ExtensionAPI) {
       updateUi(ctx);
       return { content: [{ type: "text", text: result.text }], details: {} };
     },
+  });
+
+  // Register wallet extension
+  registerWalletExtension(pi, async () => {
+    if (!browserSession) {
+      throw new Error("Browser session not started. Use browser_navigate first.");
+    }
+    return browserSession;
   });
 }
