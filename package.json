@@ -38,13 +38,13 @@
     }
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.34.41",
-    "playwright": "^1.52.0",
-    "viem": "^2.13.8"
+    "@sinclair/typebox": "0.34.48",
+    "playwright": "1.58.2",
+    "viem": "2.48.11"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "@types/node": "25.5.0",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
   }
 }
