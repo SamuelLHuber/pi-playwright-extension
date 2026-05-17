@@ -379,6 +379,11 @@ export default function playwrightExtension(pi: ExtensionAPI) {
       function: Type.String({ description: "A JavaScript function string, e.g. () => document.title" }),
       ref: Type.Optional(Type.String({ description: "Stable element ref from browser_snapshot." })),
       selector: Type.Optional(Type.String({ description: "CSS selector when no ref is available." })),
+      timeout: Type.Optional(Type.Number({
+        description: "Maximum time in milliseconds to wait for the function to complete. Defaults to 30000ms.",
+        minimum: 100,
+        maximum: 300000,
+      })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const session = await getSession(ctx);

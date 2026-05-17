@@ -171,6 +171,42 @@ test("browser session can record video artifacts", async () => {
   await session.stop();
 });
 
+test("browser evaluate respects timeout and throws on hanging function", async () => {
+  const session = new BrowserSession({
+    cwd: outputDir,
+    browserName: "chromium",
+    headless: true,
+    isolated: true,
+    outputDir,
+    viewport: { width: 1200, height: 800 },
+    videoSize: { width: 1200, height: 800 },
+    recordVideo: false,
+    retention: { maxArtifacts: 50, maxBytes: 512 * 1024 * 1024, maxAgeDays: 7 },
+    actionTimeoutMs: 10_000,
+    navigationTimeoutMs: 10_000,
+  });
+  await session.start();
+  await session.navigate(baseUrl);
+
+  // Fast evaluation should work
+  const fast = await session.evaluate({ function: "() => 42", timeout: 1000 });
+  assert.match(fast.text, /42/);
+
+  // Hanging evaluation should time out
+  await assert.rejects(
+    session.evaluate({ function: "() => new Promise(() => {})", timeout: 200 }),
+    /browser_evaluate timed out after 200ms/
+  );
+
+  // Default timeout should also apply (use a very short explicit timeout to keep tests fast)
+  await assert.rejects(
+    session.evaluate({ function: "() => new Promise(() => {})", timeout: 200 }),
+    /browser_evaluate timed out/
+  );
+
+  await session.stop();
+});
+
 test("browser session can generate a bundled run summary and clean artifacts", async () => {
   const session = new BrowserSession({
     cwd: outputDir,

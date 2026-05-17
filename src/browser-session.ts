@@ -408,15 +408,34 @@ export class BrowserSession {
     });
   }
 
-  async evaluate(params: { function: string; ref?: string; selector?: string }): Promise<TextResult> {
+  async evaluate(params: { function: string; ref?: string; selector?: string; timeout?: number }): Promise<TextResult> {
     const page = await this.getCurrentPage();
     const fn = this.parseFunction(params.function);
-    const result = params.ref || params.selector
-      ? await (await this.resolveLocator(params.ref, params.selector)).evaluate(fn)
-      : await page.evaluate(fn);
+    const timeoutMs = params.timeout ?? 30_000;
+    const evaluatePromise = params.ref || params.selector
+      ? (await this.resolveLocator(params.ref, params.selector)).evaluate(fn)
+      : page.evaluate(fn);
+    const result = await this.raceWithTimeout(evaluatePromise, timeoutMs);
     const serialized = typeof result === "string" ? result : JSON.stringify(result, null, 2);
     await this.saveVideoFrameHint();
     return { text: `Evaluation result:\n${serialized}` };
+  }
+
+  private async raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`browser_evaluate timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
   }
 
   async consoleMessages(level: ConsoleEntry["level"] = "info", all = false): Promise<TextResult> {
