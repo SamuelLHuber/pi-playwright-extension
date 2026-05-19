@@ -755,7 +755,7 @@ export class BrowserSession {
     return this.context;
   }
 
-  private async getCurrentPage(): Promise<Page> {
+  async getCurrentPage(): Promise<Page> {
     const context = await this.getContext();
     const current = this.getCurrentPageOrUndefined();
     if (current) return current;
