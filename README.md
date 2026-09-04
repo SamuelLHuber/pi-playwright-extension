@@ -41,6 +41,12 @@ From this directory:
 npm install
 ```
 
+The `postinstall` script runs `playwright install chromium`, which downloads the Chromium browser binaries required by `browser_navigate` and the other browser tools into Playwright's cache (usually `~/.cache/ms-playwright`). If the cache is deleted or Playwright is upgraded, rerun:
+
+```bash
+npx playwright install chromium
+```
+
 Then load it from pi:
 
 ```bash
@@ -52,6 +58,8 @@ Or add it to your pi package list/settings.
 ## Install from GitHub
 
 This repo is intended for git-based installation in pi.
+
+Pi runs `npm install` when setting up git packages, so the extension's `postinstall` hook also installs the required Playwright Chromium browser binaries.
 
 ### HTTPS install
 
@@ -144,8 +152,15 @@ This extension takes inspiration from Playwright MCP, but presents a pi-native t
 ## Development
 
 ```bash
+npm install
 npm run check
 npm test
+```
+
+`npm install` also provisions the Chromium browser binary through the package `postinstall` hook. To refresh only browser binaries during development, run:
+
+```bash
+npx playwright install chromium
 ```
 
 ## Retention and cleanup
@@ -194,6 +209,27 @@ The test suite launches a real headless Chromium instance against a local HTTP s
 - bundled run summary generation
 - artifact cleanup
 - extension registration
+
+## Browser binary provisioning
+
+Playwright ships browser-driving libraries through npm, but the actual browser executables are downloaded separately. This package installs Chromium automatically during setup via:
+
+```bash
+playwright install chromium
+```
+
+That hook is intentionally scoped to Chromium because it is the default engine and keeps installation size lower than installing every Playwright-supported browser. If you use `--browser-engine=firefox` or `--browser-engine=webkit`, install the matching browser manually:
+
+```bash
+npx playwright install firefox
+npx playwright install webkit
+```
+
+If `browser_navigate` fails with `browserType.launch: Executable doesn't exist`, the browser cache is missing or out of sync with the installed Playwright version. Re-run:
+
+```bash
+npx playwright install chromium
+```
 
 ## Known limitations
 
