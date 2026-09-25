@@ -1,4 +1,4 @@
-declare module "@mariozechner/pi-coding-agent" {
+declare module "@earendil-works/pi-coding-agent" {
   import type { Static, TSchema } from "@sinclair/typebox";
 
   export interface ExtensionUIContext {

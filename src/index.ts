@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { BrowserSession } from "./browser-session.js";
 import type { BrowserLaunchConfig, BrowserStatus } from "./types.js";
 import { formatStatusLine, normalizeBrowserName, parsePositiveBytes, parsePositiveInt, parseViewport, resolveOutputDir } from "./utils.js";
