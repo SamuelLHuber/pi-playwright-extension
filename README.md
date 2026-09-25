@@ -112,6 +112,7 @@ This extension takes inspiration from Playwright MCP, but presents a pi-native t
 
 ## Runtime behavior
 
+- Lazy-loads the Playwright runtime on first browser use, keeping Pi startup fast while still registering all browser tools and flags.
 - Headless by default
 - Chromium by default
 - Persistent browser session within the current pi session

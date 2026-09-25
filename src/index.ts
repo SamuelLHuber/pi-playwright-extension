@@ -1,8 +1,16 @@
 import { Type } from "@sinclair/typebox";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { BrowserSession } from "./browser-session.js";
+import type { BrowserSession } from "./browser-session.js";
 import type { BrowserLaunchConfig, BrowserStatus } from "./types.js";
-import { formatStatusLine, normalizeBrowserName, parsePositiveBytes, parsePositiveInt, parseViewport, resolveOutputDir } from "./utils.js";
+import { normalizeBrowserName, parsePositiveBytes, parsePositiveInt, parseViewport, resolveOutputDir } from "./utils.js";
+
+let browserModulePromise: Promise<typeof import("./browser-session.js")> | undefined;
+
+async function createBrowserSession(config: BrowserLaunchConfig): Promise<BrowserSession> {
+  browserModulePromise ??= import("./browser-session.js");
+  const { BrowserSession } = await browserModulePromise;
+  return new BrowserSession(config);
+}
 
 const DEFAULT_VIEWPORT = { width: 1440, height: 960 };
 const DEFAULT_ACTION_TIMEOUT_MS = 5_000;
@@ -65,7 +73,7 @@ export default function playwrightExtension(pi: ExtensionAPI) {
 
   async function getSession(ctx: ExtensionContext): Promise<BrowserSession> {
     if (!browserSession) {
-      browserSession = new BrowserSession(getConfig(ctx));
+      browserSession = await createBrowserSession(getConfig(ctx));
       await browserSession.start();
       updateUi(ctx);
     }
