@@ -1,5 +1,13 @@
 # pi-playwright-extension
 
+## 0.1.7 — 2026-10-03
+
+- Remove the handwritten Pi declaration shim; typecheck against real Pi 1.0.0 declarations.
+- Pin development tooling and update the dependency lockfile.
+- Retain browser tools, diagnostics, video recording and lazy startup.
+
+Verification: `npm run check`, `npm test` (6 tests, including real headless browser fixture navigation); real Pi 1.0 extension-loader smoke check. No authenticated website mutation was tested.
+
 ## 0.1.6
 
 ### Patch Changes
