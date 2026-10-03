@@ -1,5 +1,11 @@
 # pi-playwright-extension
 
+## 0.1.8 — 2026-10-03
+
+- Declare host-provided TypeBox and the Pi API as wildcard peer dependencies, not runtime dependencies.
+- Keep exact development dependencies for reproducible API checks and tests.
+- Add manifest/resource-loader regression coverage for Pi 1's host-package warnings.
+
 ## 0.1.7 — 2026-10-03
 
 - Remove the handwritten Pi declaration shim; typecheck against real Pi 1.0.0 declarations.
